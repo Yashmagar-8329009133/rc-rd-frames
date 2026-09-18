@@ -27,7 +27,9 @@ import { motion, AnimatePresence } from "framer-motion";
 
 import AdminSidebar from "../../components/admin/AdminSidebar";
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  "https://rc-rd-frames-1.onrender.com";
 
 const BOOKINGS_API = `${API_URL}/api/bookings`;
 const CONTACT_API = `${API_URL}/api/contact`;
