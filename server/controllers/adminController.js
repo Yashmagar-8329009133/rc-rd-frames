@@ -124,10 +124,76 @@ const loginAdmin = async (req, res) => {
   }
 };
 
+
+// =========================
+// CHANGE ADMIN PASSWORD
+// =========================
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Current password and new password are required",
+      });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: "New password must be at least 8 characters",
+      });
+    }
+
+    const admin = await Admin.findById(req.admin.id);
+
+    if (!admin) {
+      return res.status(404).json({
+        success: false,
+        message: "Admin not found",
+      });
+    }
+
+    const passwordMatch = await bcrypt.compare(
+      currentPassword,
+      admin.password
+    );
+
+    if (!passwordMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Current password is incorrect",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    admin.password = hashedPassword;
+
+    await admin.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Password changed successfully",
+    });
+  } catch (error) {
+    console.error("Change password error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Unable to change password",
+    });
+  }
+};
+
+
+
 // =========================
 // EXPORT CONTROLLERS
 // =========================
 module.exports = {
   createAdmin,
   loginAdmin,
+  changePassword,
 };
