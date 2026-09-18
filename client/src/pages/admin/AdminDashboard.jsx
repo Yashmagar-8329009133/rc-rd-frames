@@ -22,6 +22,7 @@ import {
   AlertCircle,
   Search,
   LogOut,
+  Trash2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -33,7 +34,6 @@ const API_URL =
 
 const BOOKINGS_API = `${API_URL}/api/bookings`;
 const CONTACT_API = `${API_URL}/api/contact`;
-
 function AdminDashboard() {
   const [activePage, setActivePage] = useState("dashboard");
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -62,22 +62,24 @@ function AdminDashboard() {
     localStorage.getItem("adminData") || "{}"
   );
 
-  /*
-    Get fresh token every time.
+  /* =========================
+     AUTH HEADERS
+  ========================= */
 
-    This is better than storing the token once because
-    the token may change after login.
-  */
   const getAuthHeaders = () => ({
     Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
     "Content-Type": "application/json",
   });
 
-  /*
-    Handle expired / invalid JWT.
-  */
+  /* =========================
+     HANDLE UNAUTHORIZED
+  ========================= */
+
   const handleUnauthorized = (response) => {
-    if (response.status === 401 || response.status === 403) {
+    if (
+      response.status === 401 ||
+      response.status === 403
+    ) {
       localStorage.removeItem("adminToken");
       localStorage.removeItem("adminData");
 
@@ -96,6 +98,7 @@ function AdminDashboard() {
   const handleLogout = () => {
     localStorage.removeItem("adminToken");
     localStorage.removeItem("adminData");
+
     window.location.href = "/admin/login";
   };
 
@@ -193,19 +196,23 @@ function AdminDashboard() {
       total: bookings.length,
 
       pending: bookings.filter(
-        (booking) => booking.status === "Pending"
+        (booking) =>
+          booking.status === "Pending"
       ).length,
 
       confirmed: bookings.filter(
-        (booking) => booking.status === "Confirmed"
+        (booking) =>
+          booking.status === "Confirmed"
       ).length,
 
       completed: bookings.filter(
-        (booking) => booking.status === "Completed"
+        (booking) =>
+          booking.status === "Completed"
       ).length,
 
       cancelled: bookings.filter(
-        (booking) => booking.status === "Cancelled"
+        (booking) =>
+          booking.status === "Cancelled"
       ).length,
 
       messages: messages.length,
@@ -261,7 +268,10 @@ function AdminDashboard() {
         bookingFilter === "All" ||
         booking.status === bookingFilter;
 
-      return matchesSearch && matchesStatus;
+      return (
+        matchesSearch &&
+        matchesStatus
+      );
     });
   }, [
     bookings,
@@ -299,7 +309,10 @@ function AdminDashboard() {
         (message.status || "New") ===
           messageFilter;
 
-      return matchesSearch && matchesStatus;
+      return (
+        matchesSearch &&
+        matchesStatus
+      );
     });
   }, [
     messages,
@@ -354,58 +367,118 @@ function AdminDashboard() {
   };
 
   /* =========================
-     UPDATE BOOKING STATUS
+     DELETE BOOKING
   ========================= */
 
-
-const updateBookingStatus = async (bookingId, status) => {
-  try {
-    setUpdatingBooking(true);
-
-    const response = await fetch(
-      `${BOOKINGS_API}/${bookingId}`,
-      {
-        method: "PUT",
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ status }),
-      }
+  const deleteBooking = async (bookingId) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this booking?"
     );
 
-    if (handleUnauthorized(response)) {
+    if (!confirmed) {
       return;
     }
 
-    const data = await response.json();
+    try {
+      const response = await fetch(
+        `${BOOKINGS_API}/${bookingId}`,
+        {
+          method: "DELETE",
+          headers: getAuthHeaders(),
+        }
+      );
 
-    if (!response.ok) {
-      throw new Error(
-        data.message || "Unable to update booking"
+      if (handleUnauthorized(response)) {
+        return;
+      }
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+            "Unable to delete booking"
+        );
+      }
+
+      setBookings((previous) =>
+        previous.filter(
+          (booking) =>
+            booking._id !== bookingId
+        )
+      );
+
+      setSelectedBooking(null);
+
+      alert(
+        "Booking deleted successfully."
+      );
+    } catch (error) {
+      alert(
+        error.message ||
+          "Unable to delete booking."
       );
     }
+  };
 
-    if (!data.booking) {
-      throw new Error("Updated booking data was not returned");
+  /* =========================
+     UPDATE BOOKING STATUS
+  ========================= */
+
+  const updateBookingStatus = async (
+    bookingId,
+    status
+  ) => {
+    try {
+      setUpdatingBooking(true);
+
+      const response = await fetch(
+        `${BOOKINGS_API}/${bookingId}`,
+        {
+          method: "PUT",
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ status }),
+        }
+      );
+
+      if (handleUnauthorized(response)) {
+        return;
+      }
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+            "Unable to update booking"
+        );
+      }
+
+      if (!data.booking) {
+        throw new Error(
+          "Updated booking data was not returned"
+        );
+      }
+
+      setBookings((previous) =>
+        previous.map((booking) =>
+          booking._id === bookingId
+            ? data.booking
+            : booking
+        )
+      );
+
+      setSelectedBooking(data.booking);
+    } catch (error) {
+      alert(
+        error.message ||
+          "Unable to update booking."
+      );
+    } finally {
+      setUpdatingBooking(false);
     }
+  };
 
-    // Update booking in dashboard immediately
-    setBookings((previous) =>
-      previous.map((booking) =>
-        booking._id === bookingId
-          ? data.booking
-          : booking
-      )
-    );
-
-    // Update currently opened booking modal
-    setSelectedBooking(data.booking);
-  } catch (error) {
-    alert(
-      error.message || "Unable to update booking."
-    );
-  } finally {
-    setUpdatingBooking(false);
-  }
-};
   /* =========================
      UPDATE MESSAGE STATUS
   ========================= */
@@ -485,16 +558,12 @@ const updateBookingStatus = async (bookingId, status) => {
   return (
     <div className="admin-dashboard">
 
-      {/* SIDEBAR */}
-
       <AdminSidebar
         activePage={activePage}
         setActivePage={setActivePage}
         mobileOpen={mobileOpen}
         setMobileOpen={setMobileOpen}
       />
-
-      {/* MAIN */}
 
       <main className="admin-main">
 
@@ -514,6 +583,7 @@ const updateBookingStatus = async (bookingId, status) => {
             </button>
 
             <div>
+
               <span className="admin-topbar-eyebrow">
                 RC & RD FRAMES
               </span>
@@ -527,6 +597,7 @@ const updateBookingStatus = async (bookingId, status) => {
                   ? "Bookings"
                   : "Messages"}
               </h1>
+
             </div>
 
           </div>
@@ -556,6 +627,7 @@ const updateBookingStatus = async (bookingId, status) => {
                   {statistics.newMessages}
                 </span>
               )}
+
             </button>
 
             <div className="admin-topbar-user">
@@ -568,6 +640,7 @@ const updateBookingStatus = async (bookingId, status) => {
               </div>
 
               <div>
+
                 <strong>
                   {adminData.name ||
                     "Admin"}
@@ -576,6 +649,7 @@ const updateBookingStatus = async (bookingId, status) => {
                 <span>
                   Administrator
                 </span>
+
               </div>
 
             </div>
@@ -591,21 +665,18 @@ const updateBookingStatus = async (bookingId, status) => {
             </button>
 
           </div>
+
         </header>
 
         {/* CONTENT */}
 
         <div className="admin-content">
 
-          {/* =====================
-              DASHBOARD
-          ===================== */}
+          {/* DASHBOARD */}
 
           {activePage ===
             "dashboard" && (
             <>
-
-              {/* WELCOME */}
 
               <motion.section
                 className="admin-welcome"
@@ -628,6 +699,7 @@ const updateBookingStatus = async (bookingId, status) => {
                   <h2>
                     GOOD AFTERNOON,
                     <br />
+
                     <em>
                       {(
                         adminData.name ||
@@ -653,15 +725,11 @@ const updateBookingStatus = async (bookingId, status) => {
 
               </motion.section>
 
-              {/* STATISTICS */}
-
               <section className="admin-stat-grid">
 
                 <StatCard
                   title="Total Bookings"
-                  value={
-                    statistics.total
-                  }
+                  value={statistics.total}
                   icon={
                     <CalendarDays
                       size={21}
@@ -673,22 +741,16 @@ const updateBookingStatus = async (bookingId, status) => {
 
                 <StatCard
                   title="Pending"
-                  value={
-                    statistics.pending
-                  }
+                  value={statistics.pending}
                   icon={
-                    <Clock3
-                      size={21}
-                    />
+                    <Clock3 size={21} />
                   }
                   description="Awaiting confirmation"
                 />
 
                 <StatCard
                   title="Confirmed"
-                  value={
-                    statistics.confirmed
-                  }
+                  value={statistics.confirmed}
                   icon={
                     <CheckCircle2
                       size={21}
@@ -699,9 +761,7 @@ const updateBookingStatus = async (bookingId, status) => {
 
                 <StatCard
                   title="Completed"
-                  value={
-                    statistics.completed
-                  }
+                  value={statistics.completed}
                   icon={
                     <CheckCircle2
                       size={21}
@@ -712,22 +772,16 @@ const updateBookingStatus = async (bookingId, status) => {
 
                 <StatCard
                   title="Cancelled"
-                  value={
-                    statistics.cancelled
-                  }
+                  value={statistics.cancelled}
                   icon={
-                    <CircleX
-                      size={21}
-                    />
+                    <CircleX size={21} />
                   }
                   description="Cancelled bookings"
                 />
 
                 <StatCard
                   title="Messages"
-                  value={
-                    statistics.messages
-                  }
+                  value={statistics.messages}
                   icon={
                     <MessageSquare
                       size={21}
@@ -760,9 +814,7 @@ const updateBookingStatus = async (bookingId, status) => {
 
                 {bookingError ? (
                   <ErrorBox
-                    message={
-                      bookingError
-                    }
+                    message={bookingError}
                   />
                 ) : loadingBookings ? (
                   <LoadingBox
@@ -775,17 +827,16 @@ const updateBookingStatus = async (bookingId, status) => {
                   />
                 ) : (
                   <BookingTable
-                    bookings={
-                      recentBookings
-                    }
-                    formatDate={
-                      formatDate
-                    }
+                    bookings={recentBookings}
+                    formatDate={formatDate}
                     getStatusClass={
                       getStatusClass
                     }
                     onView={
                       setSelectedBooking
+                    }
+                    onDelete={
+                      deleteBooking
                     }
                   />
                 )}
@@ -814,9 +865,7 @@ const updateBookingStatus = async (bookingId, status) => {
 
                 {messageError ? (
                   <ErrorBox
-                    message={
-                      messageError
-                    }
+                    message={messageError}
                   />
                 ) : loadingMessages ? (
                   <LoadingBox
@@ -829,12 +878,8 @@ const updateBookingStatus = async (bookingId, status) => {
                   />
                 ) : (
                   <MessageTable
-                    messages={
-                      recentMessages
-                    }
-                    formatDate={
-                      formatDate
-                    }
+                    messages={recentMessages}
+                    formatDate={formatDate}
                   />
                 )}
 
@@ -843,9 +888,7 @@ const updateBookingStatus = async (bookingId, status) => {
             </>
           )}
 
-          {/* =====================
-              BOOKINGS PAGE
-          ===================== */}
+          {/* BOOKINGS PAGE */}
 
           {activePage ===
             "bookings" && (
@@ -854,6 +897,7 @@ const updateBookingStatus = async (bookingId, status) => {
               <div className="admin-filter-header">
 
                 <div>
+
                   <span>
                     CUSTOMER BOOKINGS
                   </span>
@@ -864,11 +908,13 @@ const updateBookingStatus = async (bookingId, status) => {
                     />
                     All Bookings
                   </h3>
+
                 </div>
 
                 <div className="admin-filter-actions">
 
                   <div className="admin-search">
+
                     <Search size={15} />
 
                     <input
@@ -883,18 +929,18 @@ const updateBookingStatus = async (bookingId, status) => {
                         )
                       }
                     />
+
                   </div>
 
                   <select
-                    value={
-                      bookingFilter
-                    }
+                    value={bookingFilter}
                     onChange={(e) =>
                       setBookingFilter(
                         e.target.value
                       )
                     }
                   >
+
                     <option value="All">
                       All Status
                     </option>
@@ -914,6 +960,7 @@ const updateBookingStatus = async (bookingId, status) => {
                     <option value="Cancelled">
                       Cancelled
                     </option>
+
                   </select>
 
                   <button
@@ -934,26 +981,30 @@ const updateBookingStatus = async (bookingId, status) => {
 
               {!loadingBookings &&
                 !bookingError && (
-                  <div className="admin-result-count">
-                    Showing{" "}
-                    <strong>
-                      {
-                        filteredBookings.length
-                      }
-                    </strong>{" "}
-                    of{" "}
-                    <strong>
-                      {bookings.length}
-                    </strong>{" "}
-                    bookings
-                  </div>
-                )}
+                <div className="admin-result-count">
+
+                  Showing{" "}
+
+                  <strong>
+                    {
+                      filteredBookings.length
+                    }
+                  </strong>
+
+                  {" "}of{" "}
+
+                  <strong>
+                    {bookings.length}
+                  </strong>
+
+                  {" "}bookings
+
+                </div>
+              )}
 
               {bookingError ? (
                 <ErrorBox
-                  message={
-                    bookingError
-                  }
+                  message={bookingError}
                 />
               ) : loadingBookings ? (
                 <LoadingBox
@@ -966,17 +1017,16 @@ const updateBookingStatus = async (bookingId, status) => {
                 />
               ) : (
                 <BookingTable
-                  bookings={
-                    filteredBookings
-                  }
-                  formatDate={
-                    formatDate
-                  }
+                  bookings={filteredBookings}
+                  formatDate={formatDate}
                   getStatusClass={
                     getStatusClass
                   }
                   onView={
                     setSelectedBooking
+                  }
+                  onDelete={
+                    deleteBooking
                   }
                 />
               )}
@@ -984,9 +1034,7 @@ const updateBookingStatus = async (bookingId, status) => {
             </section>
           )}
 
-          {/* =====================
-              MESSAGES PAGE
-          ===================== */}
+          {/* MESSAGES PAGE */}
 
           {activePage ===
             "messages" && (
@@ -995,6 +1043,7 @@ const updateBookingStatus = async (bookingId, status) => {
               <div className="admin-filter-header">
 
                 <div>
+
                   <span>
                     CUSTOMER COMMUNICATION
                   </span>
@@ -1005,11 +1054,13 @@ const updateBookingStatus = async (bookingId, status) => {
                     />
                     All Messages
                   </h3>
+
                 </div>
 
                 <div className="admin-filter-actions">
 
                   <div className="admin-search">
+
                     <Search size={15} />
 
                     <input
@@ -1024,18 +1075,18 @@ const updateBookingStatus = async (bookingId, status) => {
                         )
                       }
                     />
+
                   </div>
 
                   <select
-                    value={
-                      messageFilter
-                    }
+                    value={messageFilter}
                     onChange={(e) =>
                       setMessageFilter(
                         e.target.value
                       )
                     }
                   >
+
                     <option value="All">
                       All Messages
                     </option>
@@ -1051,6 +1102,7 @@ const updateBookingStatus = async (bookingId, status) => {
                     <option value="Replied">
                       Replied
                     </option>
+
                   </select>
 
                   <button
@@ -1071,26 +1123,30 @@ const updateBookingStatus = async (bookingId, status) => {
 
               {!loadingMessages &&
                 !messageError && (
-                  <div className="admin-result-count">
-                    Showing{" "}
-                    <strong>
-                      {
-                        filteredMessages.length
-                      }
-                    </strong>{" "}
-                    of{" "}
-                    <strong>
-                      {messages.length}
-                    </strong>{" "}
-                    messages
-                  </div>
-                )}
+                <div className="admin-result-count">
+
+                  Showing{" "}
+
+                  <strong>
+                    {
+                      filteredMessages.length
+                    }
+                  </strong>
+
+                  {" "}of{" "}
+
+                  <strong>
+                    {messages.length}
+                  </strong>
+
+                  {" "}messages
+
+                </div>
+              )}
 
               {messageError ? (
                 <ErrorBox
-                  message={
-                    messageError
-                  }
+                  message={messageError}
                 />
               ) : loadingMessages ? (
                 <LoadingBox
@@ -1103,12 +1159,8 @@ const updateBookingStatus = async (bookingId, status) => {
                 />
               ) : (
                 <MessageTable
-                  messages={
-                    filteredMessages
-                  }
-                  formatDate={
-                    formatDate
-                  }
+                  messages={filteredMessages}
+                  formatDate={formatDate}
                   detailed
                   onUpdateStatus={
                     updateMessageStatus
@@ -1128,14 +1180,12 @@ const updateBookingStatus = async (bookingId, status) => {
       {/* BOOKING MODAL */}
 
       <AnimatePresence>
+
         {selectedBooking && (
+
           <BookingDetailsModal
-            booking={
-              selectedBooking
-            }
-            formatDate={
-              formatDate
-            }
+            booking={selectedBooking}
+            formatDate={formatDate}
             formatDateTime={
               formatDateTime
             }
@@ -1143,18 +1193,19 @@ const updateBookingStatus = async (bookingId, status) => {
               getStatusClass
             }
             onClose={() =>
-              setSelectedBooking(
-                null
-              )
+              setSelectedBooking(null)
             }
             onUpdateStatus={
               updateBookingStatus
             }
+            onDelete={deleteBooking}
             updating={
               updatingBooking
             }
           />
+
         )}
+
       </AnimatePresence>
 
     </div>
@@ -1186,9 +1237,7 @@ function StatCard({
           {icon}
         </div>
 
-        <ArrowUpRight
-          size={17}
-        />
+        <ArrowUpRight size={17} />
 
       </div>
 
@@ -1223,12 +1272,16 @@ function PanelHeader({
     <div className="admin-panel-header">
 
       <div>
-        <span>{eyebrow}</span>
+
+        <span>
+          {eyebrow}
+        </span>
 
         <h3>
           {icon}
           {title}
         </h3>
+
       </div>
 
       {actionText && (
@@ -1237,9 +1290,7 @@ function PanelHeader({
           onClick={onAction}
         >
           {actionText}
-          <ArrowUpRight
-            size={15}
-          />
+          <ArrowUpRight size={15} />
         </button>
       )}
 
@@ -1256,6 +1307,7 @@ function BookingTable({
   formatDate,
   getStatusClass,
   onView,
+  onDelete,
 }) {
   return (
     <div className="admin-table-wrapper">
@@ -1263,24 +1315,27 @@ function BookingTable({
       <table className="admin-table">
 
         <thead>
+
           <tr>
+
             <th>Customer</th>
             <th>Service</th>
             <th>Event Date</th>
             <th>Created</th>
             <th>Status</th>
             <th></th>
+
           </tr>
+
         </thead>
 
         <tbody>
 
           {bookings.map(
             (booking) => (
+
               <tr
-                key={
-                  booking._id
-                }
+                key={booking._id}
               >
 
                 <td>
@@ -1288,12 +1343,12 @@ function BookingTable({
                   <div className="admin-customer-cell">
 
                     <div className="admin-table-avatar">
+
                       {booking.name
-                        ?.charAt(
-                          0
-                        )
+                        ?.charAt(0)
                         .toUpperCase() ||
                         "C"}
+
                     </div>
 
                     <div>
@@ -1315,10 +1370,12 @@ function BookingTable({
                 </td>
 
                 <td>
+
                   <span className="admin-service">
                     {booking.service ||
                       "—"}
                   </span>
+
                 </td>
 
                 <td>
@@ -1348,23 +1405,49 @@ function BookingTable({
 
                 <td>
 
-                  <button
-                    className="admin-view-button"
-                    onClick={() =>
-                      onView(
-                        booking
-                      )
-                    }
-                    title="View booking"
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "8px",
+                      alignItems:
+                        "center",
+                    }}
                   >
-                    <Eye
-                      size={16}
-                    />
-                  </button>
+
+                    <button
+                      className="admin-view-button"
+                      onClick={() =>
+                        onView(booking)
+                      }
+                      title="View booking"
+                    >
+                      <Eye size={16} />
+                    </button>
+
+                    <button
+                      className="admin-view-button"
+                      onClick={() =>
+                        onDelete(
+                          booking._id
+                        )
+                      }
+                      title="Delete booking"
+                      style={{
+                        color:
+                          "#ef4444",
+                      }}
+                    >
+                      <Trash2
+                        size={16}
+                      />
+                    </button>
+
+                  </div>
 
                 </td>
 
               </tr>
+
             )
           )}
 
@@ -1393,10 +1476,10 @@ function MessageTable({
       <table className="admin-table">
 
         <thead>
+
           <tr>
 
             <th>Customer</th>
-
             <th>Email</th>
 
             {detailed && (
@@ -1404,9 +1487,7 @@ function MessageTable({
             )}
 
             <th>Message</th>
-
             <th>Date</th>
-
             <th>Status</th>
 
             {detailed && (
@@ -1414,6 +1495,7 @@ function MessageTable({
             )}
 
           </tr>
+
         </thead>
 
         <tbody>
@@ -1430,6 +1512,7 @@ function MessageTable({
                 message._id;
 
               return (
+
                 <tr
                   key={
                     message._id
@@ -1437,10 +1520,12 @@ function MessageTable({
                 >
 
                   <td>
+
                     <strong>
                       {message.name ||
                         "Unknown"}
                     </strong>
+
                   </td>
 
                   <td>
@@ -1456,10 +1541,12 @@ function MessageTable({
                   )}
 
                   <td>
+
                     <div className="admin-message-preview">
                       {message.message ||
                         "—"}
                     </div>
+
                   </td>
 
                   <td>
@@ -1491,6 +1578,7 @@ function MessageTable({
                           (
                             nextStatus
                           ) => (
+
                             <button
                               key={
                                 nextStatus
@@ -1516,9 +1604,7 @@ function MessageTable({
                               status ===
                                 nextStatus ? (
                                 <Loader2
-                                  size={
-                                    12
-                                  }
+                                  size={12}
                                   className="spinner"
                                 />
                               ) : (
@@ -1526,6 +1612,7 @@ function MessageTable({
                               )}
 
                             </button>
+
                           )
                         )}
 
@@ -1535,6 +1622,7 @@ function MessageTable({
                   )}
 
                 </tr>
+
               );
             }
           )}
@@ -1558,6 +1646,7 @@ function BookingDetailsModal({
   getStatusClass,
   onClose,
   onUpdateStatus,
+  onDelete,
   updating,
 }) {
   return (
@@ -1600,6 +1689,8 @@ function BookingDetailsModal({
         }
       >
 
+        {/* MODAL HEADER */}
+
         <div className="admin-modal-header">
 
           <div>
@@ -1623,6 +1714,8 @@ function BookingDetailsModal({
 
         </div>
 
+        {/* STATUS */}
+
         <div className="admin-modal-status-row">
 
           <span
@@ -1641,6 +1734,8 @@ function BookingDetailsModal({
           </span>
 
         </div>
+
+        {/* DETAILS */}
 
         <div className="admin-detail-grid">
 
@@ -1678,9 +1773,7 @@ function BookingDetailsModal({
 
           <DetailItem
             icon={
-              <Calendar
-                size={17}
-              />
+              <Calendar size={17} />
             }
             label="EVENT DATE"
             value={formatDate(
@@ -1690,13 +1783,13 @@ function BookingDetailsModal({
 
         </div>
 
+        {/* CUSTOMER MESSAGE */}
+
         <div className="admin-detail-message">
 
           <div className="admin-detail-message-title">
 
-            <FileText
-              size={17}
-            />
+            <FileText size={17} />
 
             <span>
               CUSTOMER MESSAGE
@@ -1711,6 +1804,8 @@ function BookingDetailsModal({
 
         </div>
 
+        {/* STATUS SECTION */}
+
         <div className="admin-status-section">
 
           <span>
@@ -1720,18 +1815,24 @@ function BookingDetailsModal({
           <div className="admin-status-buttons">
 
             {(() => {
+
               const currentStatus =
-                booking.status || "Pending";
+                booking.status ||
+                "Pending";
 
               let availableStatuses = [];
 
-              if (currentStatus === "Pending") {
+              if (
+                currentStatus ===
+                "Pending"
+              ) {
                 availableStatuses = [
                   "Confirmed",
                   "Cancelled",
                 ];
               } else if (
-                currentStatus === "Confirmed"
+                currentStatus ===
+                "Confirmed"
               ) {
                 availableStatuses = [
                   "Completed",
@@ -1740,19 +1841,24 @@ function BookingDetailsModal({
               }
 
               if (
-                availableStatuses.length === 0
+                availableStatuses.length ===
+                0
               ) {
                 return (
                   <span className="admin-status-final">
-                    {currentStatus === "Completed"
+
+                    {currentStatus ===
+                    "Completed"
                       ? "Booking completed"
                       : "Booking cancelled"}
+
                   </span>
                 );
               }
 
               return availableStatuses.map(
                 (status) => (
+
                   <button
                     key={status}
                     className={`admin-status-button ${status.toLowerCase()}`}
@@ -1764,6 +1870,7 @@ function BookingDetailsModal({
                       )
                     }
                   >
+
                     {updating ? (
                       <Loader2
                         size={15}
@@ -1772,12 +1879,61 @@ function BookingDetailsModal({
                     ) : null}
 
                     {status}
+
                   </button>
+
                 )
               );
+
             })()}
 
           </div>
+
+        </div>
+
+        {/* DELETE BOOKING */}
+
+        <div
+          style={{
+            marginTop: "20px",
+            display: "flex",
+            justifyContent:
+              "flex-end",
+          }}
+        >
+
+          <button
+            type="button"
+            onClick={() =>
+              onDelete(
+                booking._id
+              )
+            }
+            style={{
+              display: "flex",
+              alignItems:
+                "center",
+              gap: "8px",
+              padding:
+                "10px 16px",
+              border:
+                "1px solid #ef4444",
+              borderRadius:
+                "8px",
+              background:
+                "transparent",
+              color:
+                "#ef4444",
+              cursor:
+                "pointer",
+            }}
+          >
+
+            <Trash2 size={16} />
+
+            Delete Booking
+
+          </button>
 
         </div>
 
@@ -1858,9 +2014,7 @@ function ErrorBox({ message }) {
   return (
     <div className="admin-state-box error">
 
-      <AlertCircle
-        size={22}
-      />
+      <AlertCircle size={22} />
 
       <span>
         {message}

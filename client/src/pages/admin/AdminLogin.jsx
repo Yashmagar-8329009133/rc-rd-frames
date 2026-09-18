@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Lock, Mail, Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 
-const API_URL = "https://rc-rd-frames-1.onrender.com/api/admin/login";
+const API_URL =
+  "https://rc-rd-frames-1.onrender.com/api/admin/login";
 
 function AdminLogin() {
   const navigate = useNavigate();
