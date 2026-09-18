@@ -7,8 +7,8 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 
-const BOOKING_API = "http://localhost:5000/api/bookings";
-const CONTACT_API = "http://localhost:5000/api/contact";
+const BOOKING_API = "https://rc-rd-frames-1.onrender.com/api/bookings";
+const CONTACT_API = "https://rc-rd-frames-1.onrender.com/api/contact";
 
 function ContactCTA() {
   const [bookingData, setBookingData] = useState({
