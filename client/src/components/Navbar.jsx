@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Menu, X, ArrowUpRight } from "lucide-react";
+import { Menu, X, ArrowUpRight, ShieldCheck } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 function Navbar() {
@@ -31,6 +31,16 @@ function Navbar() {
             {link.name}
           </a>
         ))}
+
+        {/* Admin Login */}
+        <a
+          href="/admin/login"
+          className="admin-nav-link"
+          title="Admin Login"
+        >
+          <ShieldCheck size={15} />
+          Admin
+        </a>
       </nav>
 
       <a href="#contact" className="nav-cta">
@@ -63,6 +73,16 @@ function Navbar() {
                 {link.name}
               </a>
             ))}
+
+            {/* Mobile Admin Login */}
+            <a
+              href="/admin/login"
+              className="mobile-admin"
+              onClick={closeMenu}
+            >
+              <ShieldCheck size={18} />
+              Admin Login
+            </a>
 
             <a
               href="#contact"
