@@ -3,28 +3,29 @@ import { motion } from "framer-motion";
 
 const portfolio = [
   {
-    category: "Photography",
-    title: "Timeless Moments",
-    image:
-      "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=1000&q=85",
+    category: "Wedding Photography",
+    title: "Wedding Moments",
+    image: "/works/photography/wed1.jpeg",
   },
   {
-    category: "Events",
-    title: "Celebrations",
-    image:
-      "https://images.unsplash.com/photo-1507504031003-b417219a0fde?auto=format&fit=crop&w=1000&q=85",
+    category: "Wedding Photography",
+    title: "Beautiful Celebration",
+    image: "/works/photography/wed2.jpeg",
   },
   {
-    category: "Photography",
-    title: "Portrait Stories",
-    image:
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1000&q=85",
+    category: "Wedding Photography",
+    title: "Forever Together",
+    image: "/works/photography/wed3.jpeg",
   },
   {
-    category: "Events",
-    title: "Beautiful Beginnings",
-    image:
-      "https://images.unsplash.com/photo-1465495976277-4387d4b0e4a6?auto=format&fit=crop&w=1000&q=85",
+    category: "Wedding Photography",
+    title: "Love & Celebration",
+    image: "/works/photography/wed4.jpeg",
+  },
+  {
+    category: "Wedding Photography",
+    title: "Timeless Memories",
+    image: "/works/photography/wed5.jpeg",
   },
 ];
 
@@ -35,6 +36,7 @@ function Portfolio() {
         <div className="section-heading portfolio-heading">
           <div>
             <span className="eyebrow">SELECTED WORK</span>
+
             <h2>
               STORIES WE'VE
               <br />
@@ -56,12 +58,19 @@ function Portfolio() {
               initial={{ opacity: 0, scale: 0.96 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
+              transition={{
+                duration: 0.6,
+                delay: index * 0.08,
+              }}
             >
-              <img src={item.image} alt={item.title} />
+              <img
+                src={item.image}
+                alt={item.title}
+              />
 
               <div className="portfolio-overlay">
                 <span>{item.category}</span>
+
                 <h3>{item.title}</h3>
 
                 <div className="portfolio-arrow">
